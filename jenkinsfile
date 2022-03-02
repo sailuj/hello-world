@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    
+    environment {
+        PATH = "/opt/maven/apache-maven-3.8.4/bin:$PATH"
+    }
+    stages {
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: '02a3f60c-2c10-47c5-84ac-21f7df872d78', url: 'https://github.com/sailuj/hello-world.git'
+            }
+        }
+        stage("maven build"){
+            steps{
+                sh "mvn clean package"
+                sh"mv target/*.war target/myweb.war"
+            }
+        }
+        stage("deploy"){
+            steps{
+              sshagent(['deploy_user']) {
+              sh """
+                   scp -o StrictHostKeyChecking=no webapp/target/webapp.war ec2-user@172.31.43.45:/opt/apache-tomcat-8.5.75/webapps"
+                   
+                   ssh ec2-user@172.31.43.45 /home/ec2-user/apache-tomcat-8.5.75/bin/shutdown.sh
+                   
+                   ssh ec2-user@172.31.43.45 /home/ec2-user/apache-tomcat-8.5.75/bin/startup.sh
+                   
+                   """
+                }
+
+                }                
+            }        
+        }
+    }
+}
